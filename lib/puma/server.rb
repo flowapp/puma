@@ -674,8 +674,14 @@ module Puma
           status, headers, res_body = @app.call(env)
 
           return :async if req.hijacked
+
           # Checking to see if an attacker is trying to inject headers into the response
-          headers.reject! { |_k, v| CRLF_REGEX =~ v.to_s }
+          headers.reject! do |k, v|
+            if CRLF_REGEX =~ v.to_s
+              @events.log "Rejecting header '#{ k }' → #{ v.inspect }"
+              return true
+            end
+          end
 
           status = status.to_i
 
